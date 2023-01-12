@@ -28,3 +28,14 @@ $ cd  joplin2obsidian
 $ make
 $ cd dist
 ~~~
+
+## Notes on additions (paulhagstrom)
+
+I added something that would specifically on macOS (with XCode installed)
+change the creation dates of the files, along with the modification date.
+I also added a -nodates option to suppress the addition of creation date
+and modification date (and Joplin ID) in the YAML frontmatter.
+More interestingly, I added tag migration as well.  That should be platform-
+agnostic.  I don't know how to write in go, so the status display as it converts
+seems to be a bit glitchy but it does the conversion.  Allowed me to get from
+Evernote to Obsidian via Joplin.
