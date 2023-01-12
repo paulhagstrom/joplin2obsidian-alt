@@ -29,8 +29,10 @@ func GetFileInfo(filePath string) (*FileInfo, *string) {
 	CheckError(err)
 	strData := strings.TrimSpace(string(data))
 	metaIndex := strings.LastIndex(strData, "\n\n")
+	// metaIndex finds the boundary between the body and the metadata
+	// tag associations have no such boundary, just start at the top
 	if metaIndex <= 0 {
-		return nil, nil
+		metaIndex = 0
 	}
 
 	strMeta := strData[metaIndex:]
@@ -47,7 +49,7 @@ func GetFileInfo(filePath string) (*FileInfo, *string) {
 	}
 	metaType, err := strconv.Atoi(match[1])
 	CheckError(err)
-	if 1 != metaType && 2 != metaType && 4 != metaType {
+	if 1 != metaType && 2 != metaType && 4 != metaType && 5 != metaType && 6 != metaType {
 		return nil, nil
 	}
 
@@ -138,6 +140,7 @@ func HandlingCoreBusiness(progress chan<- int, done chan<- bool) {
 		if 2 == fi.metaType { // folder
 			folder := Folder{FileInfo: fi}
 			folderMap[folder.metaId] = &folder
+			//fmt.Println("folder: ", fi.name)
 		} else if 1 == fi.metaType { // article
 			content := (*rawData)[:fi.metaIndex]
 			r, _ := regexp.Compile("(.*\n)")
@@ -152,11 +155,15 @@ func HandlingCoreBusiness(progress chan<- int, done chan<- bool) {
 		} else if 5 == fi.metaType { // tag
 			fi.name = strings.ReplaceAll(fi.name, " ", "_") // tags cannot have spaces
 			tagMap[fi.metaId] = &Resource{FileInfo: fi}
+			//fmt.Println("tag: ", fi.name)
 		} else if 6 == fi.metaType { // association to tag
 			taggedMap[fi.metaId] = &Resource{FileInfo: fi}
 		}
 		progress <- 1
 	}
+	fmt.Println("tagMap:", len(tagMap))
+	fmt.Println("taggedMap:", len(taggedMap))
+	fmt.Println("folders:", len(folderMap))
 	RebuildFoldersRelationship(&folderMap, progress)
 	RebuildArticlesRelationship(&articleMap, &folderMap, progress)
 	RebuildTagsRelationship(&articleMap, &tagMap, &taggedMap, progress)
