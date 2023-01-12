@@ -90,7 +90,7 @@ func (a Article) save() {
 			a.prefix = "Tags:\n" + a.prefix
 		}
 		// add the dates and Joplin ID only if not suppressed
-		if *IncludeDates {
+		if !*IncludeDates {
 			if meta.metaCreatedAt != "" && meta.metaUpdatedAt != "" && meta.metaId != "" {
 				a.prefix += fmt.Sprintf("created: %v\nupdated: %v\njoplin_id: %v\n",
 					meta.metaCreatedAt, meta.metaUpdatedAt, meta.metaId,
