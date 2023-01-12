@@ -161,9 +161,9 @@ func HandlingCoreBusiness(progress chan<- int, done chan<- bool) {
 		}
 		progress <- 1
 	}
-	fmt.Println("tagMap:", len(tagMap))
-	fmt.Println("taggedMap:", len(taggedMap))
-	fmt.Println("folders:", len(folderMap))
+	//fmt.Println("tagMap:", len(tagMap))
+	//fmt.Println("taggedMap:", len(taggedMap))
+	//fmt.Println("folders:", len(folderMap))
 	RebuildFoldersRelationship(&folderMap, progress)
 	RebuildArticlesRelationship(&articleMap, &folderMap, progress)
 	RebuildTagsRelationship(&articleMap, &tagMap, &taggedMap, progress)
