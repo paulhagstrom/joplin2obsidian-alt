@@ -151,9 +151,9 @@ func HandlingCoreBusiness(progress chan<- int, done chan<- bool) {
 			resMap[fi.metaId] = &Resource{FileInfo: fi}
 		} else if 5 == fi.metaType { // tag
 			fi.name = strings.ReplaceAll(fi.name, " ", "_") // tags cannot have spaces
-			taggedMap[fi.metaId] = &Resource{FileInfo: fi}
-		} else if 6 == fi.metaType { // association to tag
 			tagMap[fi.metaId] = &Resource{FileInfo: fi}
+		} else if 6 == fi.metaType { // association to tag
+			taggedMap[fi.metaId] = &Resource{FileInfo: fi}
 		}
 		progress <- 1
 	}
