@@ -3,20 +3,22 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/schollz/progressbar/v3"
 	"os"
+
+	"github.com/schollz/progressbar/v3"
 )
 
 var Version string
 
 func main() {
-	SrcPath = flag.String("s", "","Specify the directory where Joplin exported the RAW data" )
+	SrcPath = flag.String("s", "", "Specify the directory where Joplin exported the RAW data")
 	DestPath = flag.String("d", "", "The directory of Obsidian vault")
+	IncludeDates = flag.Bool("nodates", false, "Skip dates in the frontmatter")
 	flag.Parse()
 
 	fmt.Printf("joplin2obsidian %s\n\n", Version)
 
-	if len(*SrcPath)==0 || len(*DestPath)==0 {
+	if len(*SrcPath) == 0 || len(*DestPath) == 0 {
 		_, err := fmt.Fprintf(os.Stderr, "Usage of %s:\n", os.Args[0])
 		CheckError(err)
 		flag.PrintDefaults()
@@ -24,7 +26,7 @@ func main() {
 	}
 
 	chkPath := func(p string) {
-		if fi, err := os.Stat(p);os.IsNotExist(err) {
+		if fi, err := os.Stat(p); os.IsNotExist(err) {
 			println(fmt.Sprintf("%s isn't exist", p))
 			os.Exit(-1)
 		} else {
@@ -37,7 +39,7 @@ func main() {
 	chkPath(*SrcPath)
 	chkPath(*DestPath)
 
-	progress := make(chan int,1)
+	progress := make(chan int, 1)
 	done := make(chan bool, 1)
 	go HandlingCoreBusiness(progress, done)
 
@@ -54,12 +56,12 @@ func main() {
 				err := bar.Set(0)
 				CheckError(err)
 			}
-			if bar!=nil {
+			if bar != nil {
 				err := bar.Add(1)
 				CheckError(err)
 			}
 		}
-		if bar!=nil {
+		if bar != nil {
 			bar.Finish()
 		}
 	}()

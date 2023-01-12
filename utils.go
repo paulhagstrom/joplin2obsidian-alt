@@ -19,6 +19,8 @@ var (
 	rName     = regexp.MustCompile("(.*)\n")
 	rCreateAt = regexp.MustCompile("user_created_time: *(.*)\n")
 	rUpdateAt = regexp.MustCompile("user_updated_time: *(.*)\n")
+	rNoteID   = regexp.MustCompile("note_id: *(.*)\n")
+	rTagID    = regexp.MustCompile("tag_id: *(.*)\n")
 )
 
 func GetFileInfo(filePath string) (*FileInfo, *string) {
@@ -79,6 +81,18 @@ func GetFileInfo(filePath string) (*FileInfo, *string) {
 	}
 	updatedAt := strings.TrimSpace(match[1])
 
+	metaNoteId := ""
+	match = rNoteID.FindStringSubmatch(strData)
+	if len(match) >= 2 {
+		metaNoteId = match[1]
+	}
+
+	metaTagId := ""
+	match = rTagID.FindStringSubmatch(strData)
+	if len(match) >= 2 {
+		metaTagId = match[1]
+	}
+
 	return &FileInfo{
 		name:          name,
 		metaIndex:     metaIndex,
@@ -88,14 +102,17 @@ func GetFileInfo(filePath string) (*FileInfo, *string) {
 		metaFileExt:   metaFileExt,
 		metaCreatedAt: createdAt,
 		metaUpdatedAt: updatedAt,
+		metaNoteId:    metaNoteId,
+		metaTagId:     metaTagId,
 	}, &strData
 }
 
-var StepDesc = [5]string{
+var StepDesc = [6]string{
 	"Initializing",
 	"Extracting Metadata", //1
 	"Rebuilding Folders",
 	"Rebuilding Articles",
+	"Associating tags",
 	"Saving Data",
 }
 
@@ -103,6 +120,8 @@ func HandlingCoreBusiness(progress chan<- int, done chan<- bool) {
 	folderMap := make(map[string]*Folder)
 	articleMap := make(map[string]*Article)
 	resMap := make(map[string]*Resource)
+	tagMap := make(map[string]*Resource)
+	taggedMap := make(map[string]*Resource)
 	c, err := ioutil.ReadDir(*SrcPath)
 	CheckError(err)
 	for _, entry := range c {
@@ -116,10 +135,10 @@ func HandlingCoreBusiness(progress chan<- int, done chan<- bool) {
 		if fi == nil {
 			continue
 		}
-		if 2 == fi.metaType {
+		if 2 == fi.metaType { // folder
 			folder := Folder{FileInfo: fi}
 			folderMap[folder.metaId] = &folder
-		} else if 1 == fi.metaType {
+		} else if 1 == fi.metaType { // article
 			content := (*rawData)[:fi.metaIndex]
 			r, _ := regexp.Compile("(.*\n)")
 			match := r.FindStringIndex(content)
@@ -128,13 +147,19 @@ func HandlingCoreBusiness(progress chan<- int, done chan<- bool) {
 			}
 			article := Article{FileInfo: fi, content: content}
 			articleMap[article.metaId] = &article
-		} else if 4 == fi.metaType {
+		} else if 4 == fi.metaType { // resource
 			resMap[fi.metaId] = &Resource{FileInfo: fi}
+		} else if 5 == fi.metaType { // tag
+			fi.name = strings.ReplaceAll(fi.name, " ", "_") // tags cannot have spaces
+			taggedMap[fi.metaId] = &Resource{FileInfo: fi}
+		} else if 6 == fi.metaType { // association to tag
+			tagMap[fi.metaId] = &Resource{FileInfo: fi}
 		}
 		progress <- 1
 	}
 	RebuildFoldersRelationship(&folderMap, progress)
 	RebuildArticlesRelationship(&articleMap, &folderMap, progress)
+	RebuildTagsRelationship(&articleMap, &tagMap, &taggedMap, progress)
 
 	err = copy2.Copy(path.Join(*SrcPath, ResourcesFolder), path.Join(*DestPath, ResourcesFolder))
 	CheckError(err)
@@ -142,7 +167,7 @@ func HandlingCoreBusiness(progress chan<- int, done chan<- bool) {
 	for _, article := range articleMap {
 		FixResourceRef(article, &resMap, &articleMap)
 		article.save()
-		progress <- 4
+		progress <- 5
 	}
 
 	close(progress)
@@ -189,5 +214,14 @@ func RebuildArticlesRelationship(articleMap *map[string]*Article, folderMap *map
 		parent := (*folderMap)[article.metaParentId]
 		article.folder = parent
 		progress <- 3
+	}
+}
+
+func RebuildTagsRelationship(articleMap *map[string]*Article, tagMap *map[string]*Resource, taggedMap *map[string]*Resource, progress chan<- int) {
+	for _, tagged := range *taggedMap {
+		article := (*articleMap)[tagged.metaNoteId]
+		tag := (*tagMap)[tagged.metaTagId]
+		article.prefix += fmt.Sprintf("  - %v\n", tag.name)
+		progress <- 4
 	}
 }
